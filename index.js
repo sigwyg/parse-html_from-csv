@@ -2,32 +2,38 @@ var fs = require('fs');
 var csv = require('csv');
 var htmlparser = require("htmlparser2");
 
-var input = fs.readFile('./ee37e951f5fca269cefbaf6a21d4c4a8.csv', function(err, data){
+/**
+ * Docs
+ *  - CSV: http://csv.adaltas.com/
+ *  - fs: https://nodejs.org/api/fs.html
+ *  - cheerio: https://github.com/cheeriojs/cheerio
+ */
+var input = fs.readFile('./input.csv', (err, data) => {
     // columns: true でObjectになる。Arrayのままのが速いかも？
-    csv.parse(data, {columns: true}, function(err, output) {
+    csv.parse(data, {columns: true}, (err, output) => {
         var tag_cnt = {
             open: 0,
             close: 0,
         };
         var parser_html = new htmlparser.Parser({
-            onopentag: function(name, att) {
+            onopentag: (name, att) => {
                 //console.log(name);
                 tag_cnt.open++
             },
-            onclosetag: function(name) {
+            onclosetag: (name) => {
                 //console.log("/" + name);
                 tag_cnt.close++
             },
-            ontext: function(text) {
+            ontext: (text) => {
                 //console.log(text);
             },
-            onerror: function(err){
+            onerror: (err) => {
                 //console.log(err);
             },
-            oncomment: function(data) {
+            oncomment: (data) => {
                 //console.log(data);
             },
-            onprocessinginstruction: function(name, data) {
+            onprocessinginstruction: (name, data) => {
                 // <?php とか
                 //console.log(data);
             },
@@ -37,12 +43,10 @@ var input = fs.readFile('./ee37e951f5fca269cefbaf6a21d4c4a8.csv', function(err, 
         // id: 23361が入れ子問題の記事
 
         var csv_new = [];
-        output.forEach(function(entry){
-            tag_cnt = {
-                open: 0,
-                close: 0,
-            };
+        output.forEach(entry => {
+            tag_cnt = { open: 0, close: 0 };
             parser_html.write(entry.post_content);
+
             if(tag_cnt.open !== tag_cnt.close){
                 console.log(entry.post_id);
                 console.log(tag_cnt);
@@ -64,9 +68,9 @@ var input = fs.readFile('./ee37e951f5fca269cefbaf6a21d4c4a8.csv', function(err, 
             content: 'post_content'
         };
         // The stringifier receive an array and return a string inside a user-provided callback.
-        csv.stringify(csv_new, {header: true, columns: columns}, function(err, output){
+        csv.stringify(csv_new, {header: true, columns: columns}, (err, output) => {
             // save file
-            fs.writeFile('./formList.csv', output, 'utf8', function (err) {
+            fs.writeFile('./formList.csv', output, 'utf8', err => {
                 if (err) {
                     console.log('Some error occured - file either not saved or corrupted file saved.');
                 } else{
