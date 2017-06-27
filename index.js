@@ -26,14 +26,8 @@ const input = fs.readFile(file, (err, data) => {
             close: 0,
         };
         const parser_html = new htmlparser.Parser({
-            onopentag: (name, att) => {
-                //console.log(name);
-                tag_cnt.open++
-            },
-            onclosetag: (name) => {
-                //console.log("/" + name);
-                tag_cnt.close++
-            },
+            onopentag: (name, att) => tag_cnt.open++,
+            onclosetag: (name) => tag_cnt.close++,
             onerror: (err) => console.log(err),
             ontext: (text) => { /*console.log(text);*/ },
             oncomment: (data) => { /*console.log(data);*/ },
@@ -44,38 +38,47 @@ const input = fs.readFile(file, (err, data) => {
         }, {decodeEntities: true});
 
         // execute
+        console.time('csv_foreach');
         const csv_new = [];
         output.forEach(entry => {
+            // 入れ子問題の記事チェック
             tag_cnt = { open: 0, close: 0 };
             parser_html.write(entry.post_content);
-
-            // 入れ子問題の記事チェック
             if(tag_cnt.open !== tag_cnt.close){
-                console.log(entry.post_id + "-------------------------------------------------------");
+                console.log(entry.post_id, "-------------------------------------------------------");
                 console.log(tag_cnt);
             }
 
-            // コメントノードを掴むのが難しいので、spanに変換する
+            /**
+             * 見出し直後の改ページの検出
+             *  - コメントノードを掴むのが難しいので、spanに変換する
+             *  - prev/next/siblingsだと、改行がtext nodeとしてカウントされるため
+             *  - decodeEntities: trueだと、日本語文字が変換されてしまうためfalseにしている
+             *  - loadsすると<html><body>が補完されているため、出力時にはbody.html()を渡す
+             */
             entry.post_content = String(entry.post_content).replace(/<!--nextpage-->/g, '<span class="nextpage"></span>')
-            // decodeEntities: trueだと、日本語文字が変換されてしまうため
             const $ = cheerio.load(entry.post_content, { decodeEntities: false });
-            // 見出し直後の改ページの検出
-            // prev/next/siblingsだと、改行がtext nodeとしてカウントされるため
             const nextpage = $(".Blue.Ttl + .nextpage");
             if (nextpage.length > 0) {
                 nextpage.prev().before('<!--nextpage-->');
                 $(".Blue.Ttl + .nextpage").remove();
-                // <html><body>が補完されているため
                 entry.post_content = $("body").eq(0).html();
             }
-
-            // コメントに戻す
             entry.post_content = String(entry.post_content).replace(/<span class="nextpage"><\/span>/g, '<!--nextpage-->')
+            /**
+             * for debug
+             *  - Objectを色付きで出力
+             *  - depth: nullだと超重いので注意
+            if (entry.post_id == 23361) {
+                console.dir(nextpage, {depth: null, colors: true});
+            }
+             */
 
             // push new data
             csv_new.push([entry.post_id, entry.post_type, entry.post_content]);
         });
         parser_html.end();
+        console.timeEnd('csv_foreach');
 
         // for the "header" option
         const columns = {
