@@ -19,8 +19,15 @@ if (!process.argv[2] || process.argv[2] == '-') {
 
 // CSVファイルを読む
 const input = fs.readFile(file, (err, data) => {
+    if (err) throw err;
     // columns: true でObjectになる。Arrayのままのが速いかも？
     csv.parse(data, {columns: true}, (err, output) => {
+        if (err) throw err;
+        if(!output[0].hasOwnProperty('post_id') || !output[0].hasOwnProperty('post_type') || !output[0].hasOwnProperty('post_content')) {
+            console.warn('ヘッダにpost_id, post_type, post_contentが必要です');
+            process.exit(1);
+        }
+
         let tag_cnt = {
             open: 0,
             close: 0,
@@ -88,6 +95,7 @@ const input = fs.readFile(file, (err, data) => {
         };
         // csv用にエスケープする
         csv.stringify(csv_new, {header: true, columns: columns}, (err, output) => {
+            if (err) throw err;
             // save file
             fs.writeFile('./output.csv', output, 'utf8', err => {
                 if (err) {
