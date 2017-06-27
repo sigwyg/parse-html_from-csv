@@ -9,7 +9,13 @@ const cheerio = require('cheerio');
  *  - fs: https://nodejs.org/api/fs.html
  *  - cheerio: https://github.com/cheeriojs/cheerio
  */
-const input = fs.readFile('./input.csv', (err, data) => {
+const file = process.argv[2];
+if (!process.argv[2] || process.argv[2] == '-') {
+    console.warn("引数にCSVファイル名を指定して下さい。");
+    process.exit(1);
+}
+
+const input = fs.readFile(file, (err, data) => {
     // columns: true でObjectになる。Arrayのままのが速いかも？
     csv.parse(data, {columns: true}, (err, output) => {
         let tag_cnt = {
